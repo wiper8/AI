@@ -1,0 +1,315 @@
+#' @include naming.R
+NULL
+
+#' Sigmoid function.
+#'
+#' @param x numeric vector
+#'
+#' @return sigmoized arguments.
+#'
+#' @examples sig(c(3, 5, -2, 0))
+sig <- function(x) {
+  1/(1+exp(-x))
+}
+
+#' calculate activations in neural network.
+#'
+#' @param nn neural network object.
+#' @param inputs matrix of observations with every input.
+#'
+#' @return list of matrices of activations.
+activations <- function(nn, inputs) {
+
+  n <- nn$n_layer-1
+
+  #initialiser les activations du neuralnetwork
+  acti <- list()
+
+  #first calculation is from inputs_indiv
+  acti[[1]] <- inputs
+
+  #next activations are from activations
+  if(n>1) {
+    for(layer in 2:n) acti[[layer]] <- sig(cbind(`1`=rep(1, nrow(inputs)),
+                                                 acti[[layer-1]])%*%nn$weights[[layer-1]])
+  }
+
+  acti[[n+1]] <- cbind(`1`=rep(1, nrow(inputs)), acti[[n]])%*%nn$weights[[n]]
+  if(!nn$linear.output) acti[[n+1]] <- sig(acti[[n+1]])
+
+  acti
+}
+
+#' calculate errors in neural network for derivatives.
+#' Errors are derivatives of the cost function with regards to the z (XW+b).
+#'
+#' @param nn neural network object.
+#' @param acti list of matrices of activations (from activations function).
+#' @param inputs matrix of observations with every input.
+#' @param target matrix of observations with every real target.
+#' @param Loss_fun logical : if the function to maximize/minimize is a Loss function.
+#' if FALSE, it is considered to be a linear target.
+#' @param policy_linear_output logical : if the policy output in DDPG is linear.
+#'
+#' @return list of matrices of errors for derivatives.
+errors <- function(nn, acti, inputs, target, Loss_fun=TRUE, policy_linear_output=TRUE) {
+
+  n <- nn$n_layer
+
+  #list of error vectors
+  error <- list()
+
+  #if minimizing a parabola
+  if(Loss_fun) {
+    #si c'est linear, la dernière dérivée est différente
+    if(!nn$linear.output) {
+      error[[n]] <- 2*(target-acti[[n]])*-1*acti[[n]]*(1-acti[[n]])
+    } else {
+      error[[n]] <- 2*(target-acti[[n]])*-1
+    }
+  } else {
+    #si c'est linear, la dernière dérivée est différente
+    if(!nn$linear.output) {
+      error[[n]] <- acti[[n]]*(1-acti[[n]])
+    } else {
+      error[[n]] <- matrix(rep(1L, length(acti[[n]])))
+    }
+  }
+
+  #error in hidden layers
+  if(n>2) for(hidden in (n-1):2) error[[hidden]] <- error[[hidden+1]]%*%t(matrix(nn$weights[[hidden]][-1, ], ncol=ncol(nn$weights[[hidden]])))*acti[[hidden]]*(1-acti[[hidden]])
+
+  #error in first layer
+  if(policy_linear_output) {
+    error[[1]] <- error[[2]]%*%t(matrix(nn$weights[[1]][-1, ], ncol=ncol(nn$weights[[1]])))
+  } else {
+    error[[1]] <- error[[2]]%*%t(matrix(nn$weights[[1]][-1, ], ncol=ncol(nn$weights[[1]])))*acti[[1]]*(1-acti[[1]])
+  }
+  error
+}
+
+#' calculate gradients in neural network.
+#'
+#' @param nn neural network object.
+#' @param error list of errors.
+#' @param acti list of activations.
+#'
+#' @return list of matrices of errors for derivatives.
+gradients <- function(nn, error, acti) {
+
+  #remplir les gradients et updater
+  gradient <- lapply(2:nn$n_layer, function(layer) {
+    b <- apply(error[[layer]], 2, mean)
+    w <- t(acti[[layer-1]])%*%error[[layer]]/nrow(acti[[layer-1]])
+    rbind(b, w)
+  })
+
+  gradient
+}
+
+
+#' Backpropagate data on a neural network
+#'
+#' @param nn neural network
+#' @param newdata data.frame of the inputs and the outputs
+#' @param threshold numeric : maximum gradient of all the weights to stop backpropagation
+#' @param stepmax integer : max number of iterations of backpropagation
+#' @param step_size numeric : multiplier of the gradient.
+#' @param algo character : convergence algorithm either "backprop" or "rprop+".
+#'
+#' @return list of neural network (class : nn) and the mean Loss
+#' @export
+#'
+# @examples
+backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size = 0.5, algo="backprop") {
+
+  target <- as.matrix(stats::model.frame(as.formula(call("~", nn$formula[[2]])), newdata))
+
+  #tracking the loss amount over improvements
+  Loss <- mean((target-predict.nn(nn, newdata))^2)
+
+  n <- nn$n_layer-1
+
+  inputs <- stats::model.frame(as.formula(call("~", nn$formula[[3]])), newdata)
+
+  i <- 0
+  running <- TRUE
+  if(algo=="backprop") {
+    while(running) {
+
+      acti <- activations(nn, as.matrix(inputs))
+
+      error <- errors(nn, acti, inputs, target)
+
+      gradient <- gradients(nn, error, acti)
+
+      #update
+      nn$weights <- mapply(function(x, y) x-y*step_size, nn$weights, gradient, SIMPLIFY = FALSE)
+
+      new_mean_loss <- mean((target-predict.nn(nn, newdata))^2)
+
+      if(tail(Loss, 1)<=new_mean_loss) {
+        #update back
+        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]+gradient[[layer]]*step_size)
+        step_size <- step_size/2
+      } else {
+        #double stepsize?
+        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]-gradient[[layer]]*step_size)
+
+        if(new_mean_loss<mean((target-predict.nn(nn, newdata))^2)) {
+          #update back
+          nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]+gradient[[layer]]*step_size)
+        } else {step_size <- step_size*2}
+      }
+
+      Loss <- c(Loss, mean((target-predict.nn(nn, newdata))^2))
+
+      if(all(abs(unlist(gradient))<threshold)) {
+        running <- FALSE
+        print(paste0("threshold reached."))
+      }
+      i <- i+1
+      if(i==stepmax) {
+        running <- FALSE
+        if(i!=1) print(paste0(i, " steps reached."))
+      }
+    }
+  } else if(algo=="rprop+") {
+
+    step_update <- lapply(1:n, function(layer) matrix(0.1, nrow=nrow(nn$weights[[layer]]), ncol=ncol(nn$weights[[layer]])))
+
+    while(running) {
+
+      acti <- activations(nn, as.matrix(inputs))
+
+      error <- errors(nn, acti, inputs, target)
+
+      gradient_new <- gradients(nn, error, acti)
+
+      if(i==0) gradient <- gradient_new
+
+      #update
+      change <- lapply(1:n, function(layer) (gradient_new[[layer]]>=0)!=(gradient[[layer]]>=0))
+      step_update <- lapply(1:n, function(layer) (change[[layer]]*step_update[[layer]]/2+(1-change[[layer]])*step_update[[layer]]*1.2))
+      step_update <- mapply(function(x) matrix(pmax(1e-10, pmin(0.5, x)), ncol=ncol(x)), step_update, SIMPLIFY = FALSE)
+      nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]-step_update[[layer]]*sign(gradient_new[[layer]]))
+
+      #new gradient is now old
+      gradient <- gradient_new
+
+
+      Loss <- c(Loss, mean((target-predict.nn(nn, newdata))^2))
+
+      if(all(abs(unlist(gradient))<threshold)) {
+        running <- FALSE
+        print(paste0("threshold reached."))
+      }
+      i <- i+1
+      if(i==stepmax) {
+        running <- FALSE
+        if(i!=1) print(paste0(i, " steps reached."))
+      }
+    }
+  }
+
+    #remove dimnames
+    for(i in 1:n) dimnames(nn$weights[[i]]) <- NULL
+
+    #change old infos on graph
+    nn$mean_error_squ <- tail(Loss, 1)
+    nn$step_count <- i
+
+    list(nn=nn, Loss=Loss)
+}
+
+#' Backpropagate data on a neural network
+#'
+#' @param policy_nn policy neural network.
+#' @param critic_nn critic neural network.
+#' @param newdata data.frame of the inputs from policy and the outputs wanted from critic.
+#' @param stepmax integer : max number of iterations of backpropagation
+#' @param step_size numeric : multiplier of the gradient.
+#'
+#' @return list of neural network (class : nn) and the mean Loss
+#' @export
+#'
+#' @examples
+#' backprop_policy(
+#' policy_nn=policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
+#' critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
+#' newdata=data.frame(a=c(6, 12, 0, -5))
+#' )
+backprop_policy <- function(policy_nn, critic_nn, newdata, stepmax=1, step_size=0.5) {
+
+  crit_inp <- as.data.frame(as.matrix(predict.nn(policy_nn, newdata)))
+  colnames(crit_inp) <- naming(policy_nn, FALSE)
+
+  inputs <- cbind(newdata, crit_inp)
+
+  #reorder
+  inputs <- stats::model.frame(as.formula(call("~", critic_nn$formula[[3]])), inputs)
+
+  #tracking the reward amount over improvements
+  rew <- mean(predict.nn(critic_nn, inputs))
+
+  for(j in 1:stepmax) {
+    #j <- 1
+
+    n_pol <- length(policy_nn$weights)
+
+    acti <- activations(critic_nn, as.matrix(inputs))
+
+    error <- errors(critic_nn, acti, inputs, Loss_fun=FALSE, policy_linear_output = policy_nn$linear.output)
+
+    #activations neuralnetwork
+    acti_policy <- activations(policy_nn, as.matrix(stats::model.frame(as.formula(call("~", policy_nn$formula[[3]])), inputs)))
+
+    #initialiser l'error du policy
+    error_policy <- list()
+
+    #error in last layer
+    colnames(error[[1]]) <- naming(critic_nn)
+    error_policy[[n_pol+1]] <- as.matrix(stats::model.frame(as.formula(call("~", policy_nn$formula[[2]])), as.data.frame(error[[1]])))
+
+    #error in hidden layers
+    if(n_pol>1) for(hidden in n_pol:2) error_policy[[hidden]] <- error_policy[[hidden+1]]%*%t(matrix(policy_nn$weights[[hidden]][-1, ], ncol=ncol(policy_nn$weights[[hidden]])))*acti_policy[[hidden]]*(1-acti_policy[[hidden]])
+
+    #initialiser le gradient du policy
+    gradient <- gradients(policy_nn, error_policy, acti_policy)
+
+
+    #updating gradient
+    policy_nn$weights <- lapply(1:n_pol, function(layer) policy_nn$weights[[layer]]+gradient[[layer]]*step_size)
+
+
+    #tracking the reward amount over improvements
+    pred <- predict.nn(policy_nn, newdata)
+    if(is.matrix(pred)) {
+      crit_inp <- as.data.frame(pred)
+      colnames(crit_inp) <- naming(policy_nn, FALSE)
+    } else {
+      crit_inp <- as.data.frame(t(pred))
+      colnames(crit_inp) <- naming(policy_nn, FALSE)
+    }
+
+    inputs <- cbind(newdata, crit_inp)
+    #reorder
+    inputs <- stats::model.frame(as.formula(call("~", critic_nn$formula[[3]])), inputs)
+
+    new_mean_reward <- mean(predict.nn(critic_nn, inputs))
+
+    #if descent instead of ascent
+    if(tail(rew, 1)>=new_mean_reward) {
+      #go back
+      #updating gradient
+      policy_nn$weights <- lapply(1:n_pol, function(layer) policy_nn$weights[[layer]]-gradient[[layer]]*step_size)
+      step_size <- step_size/2
+    }
+
+    rew <- c(rew, new_mean_reward)
+
+  }
+  if(j!=1) print(paste0(j, " steps reached."))
+  list(nn=policy_nn, Reward=rew)
+}
+
