@@ -1,9 +1,13 @@
+#' @include backprop.R
+
 #' Initialize a neural network
 #'
 #' @param formula formula
-#' @param hidden numeric vector for the number of neurons per hidden layer
+#' @param hidden numeric vector for the number of neurons per hidden layer.
 #' @param startweights NULL, "zero" or list of matrices of the startweights.
-#' @param linear.output logic : are the outputs linear or sigmoized?
+#' @param linear.output logic : are the outputs linear or passed through the
+#'   activation_fun?
+#' @param activation_fun function : activation function for neurons.
 #'
 #' @return neural network (class : nn)
 #' @export
@@ -11,8 +15,9 @@
 # @examples
 #TODO add colnames and rownames to weights matrices
 #TODO check col_gradient green  : make sure 0.5 is black and red and black is correct. also check if colors are at the right places.
-neuralnetwork <- function(formula, hidden=0, startweights = NULL,
-                          linear.output = TRUE) {
+neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
+                          linear.output = TRUE, activation_fun = sig,
+                          dactivation_fun = dsig) {
 
   #initialiser liste du neural network
   nn <- list()
@@ -22,8 +27,8 @@ neuralnetwork <- function(formula, hidden=0, startweights = NULL,
 
 
   #nombre de layer
-  n_hidden_layer <- ifelse(any(hidden==0), 0, length(hidden))
-  n_layer <- n_hidden_layer+2
+  n_hidden_layer <- ifelse(any(hidden == 0), 0, length(hidden))
+  n_layer <- n_hidden_layer + 2
 
   #initialiser liste des weights
   nn$weights <- list()
@@ -53,6 +58,8 @@ neuralnetwork <- function(formula, hidden=0, startweights = NULL,
   nn$linear.output <- linear.output
   nn$n_hidden_layer <- n_hidden_layer
   nn$n_layer <- n_layer
+  nn$activation_fun <- activation_fun
+  nn$dactivation_fun <- dactivation_fun
 
   nn
 }

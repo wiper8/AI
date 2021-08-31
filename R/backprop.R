@@ -1,21 +1,57 @@
 #' @include naming.R
 NULL
 
-#' Sigmoid function.
+#' Sigmoid function
 #'
-#' @param x numeric vector
+#' @param x numeric vector.
 #'
 #' @return sigmoized arguments.
 #'
 #' @examples sig(c(3, 5, -2, 0))
 sig <- function(x) {
-  1/(1+exp(-x))
+  1 / (1 + exp(-x))
+}
+
+#' Sigmoid derivative function
+#'
+#' @param x numeric vector.
+#'
+#' @return derivative of sigmoized arguments.
+#'
+#' @examples dsig(c(0.2, 0.5, 0.7, 0.9))
+dsig <- function(x) {
+  x * (1 - x)
+}
+
+#' Rectified Linear Unit activation derivative function
+#'
+#' @param x numeric vector.
+#'
+#' @return ReLUed arguments.
+#'
+#' @examples
+#' ReLU(c(3, 5, -2, 0))
+ReLU <- function(x) {
+  pmax(0, x)
+}
+
+#' Rectified Linear Unit activation function
+#'
+#' @param x numeric vector.
+#'
+#' @return derivative of ReLUed arguements.
+#'
+#' @examples
+#' dReLU(c(3, 5, -2, 0))
+dReLU <- function(x) {
+  ifelse(x <= 0, 0, 1)
 }
 
 #' calculate activations in neural network.
 #'
 #' @param nn neural network object.
 #' @param inputs matrix of observations with every input.
+
 #'
 #' @return list of matrices of activations.
 activations <- function(nn, inputs) {
@@ -29,13 +65,14 @@ activations <- function(nn, inputs) {
   acti[[1]] <- inputs
 
   #next activations are from activations
-  if(n>1) {
-    for(layer in 2:n) acti[[layer]] <- sig(cbind(`1`=rep(1, nrow(inputs)),
-                                                 acti[[layer-1]])%*%nn$weights[[layer-1]])
+  if (n > 1) {
+    for (layer in 2:n) acti[[layer]] <- as.matrix(nn$activation_fun(cbind(`1`=rep(1, nrow(inputs)),
+                                                                acti[[layer-1]])%*%nn$weights[[layer-1]]), nrow(inputs))
   }
 
-  acti[[n+1]] <- cbind(`1`=rep(1, nrow(inputs)), acti[[n]])%*%nn$weights[[n]]
-  if(!nn$linear.output) acti[[n+1]] <- sig(acti[[n+1]])
+
+  acti[[n+1]] <- as.matrix(cbind(`1`=rep(1, nrow(inputs)), acti[[n]])%*%nn$weights[[n]], nrow(inputs))
+  if(!nn$linear.output) acti[[n+1]] <- nn$activation_fun(acti[[n+1]])
 
   acti
 }
@@ -52,7 +89,8 @@ activations <- function(nn, inputs) {
 #' @param policy_linear_output logical : if the policy output in DDPG is linear.
 #'
 #' @return list of matrices of errors for derivatives.
-errors <- function(nn, acti, inputs, target, Loss_fun=TRUE, policy_linear_output=TRUE) {
+errors <- function(nn, acti, inputs, target, Loss_fun = TRUE,
+                   policy_linear_output = TRUE) {
 
   n <- nn$n_layer
 
@@ -63,27 +101,29 @@ errors <- function(nn, acti, inputs, target, Loss_fun=TRUE, policy_linear_output
   if(Loss_fun) {
     #si c'est linear, la dernière dérivée est différente
     if(!nn$linear.output) {
-      error[[n]] <- 2*(target-acti[[n]])*-1*acti[[n]]*(1-acti[[n]])
+      error[[n]] <- 2 * (target - acti[[n]]) * -1 * nn$dactivation_fun(acti[[n]])
     } else {
-      error[[n]] <- 2*(target-acti[[n]])*-1
+      error[[n]] <- 2 * (target - acti[[n]]) * -1
     }
   } else {
     #si c'est linear, la dernière dérivée est différente
     if(!nn$linear.output) {
-      error[[n]] <- acti[[n]]*(1-acti[[n]])
+      error[[n]] <- nn$dactivation_fun(acti[[n]])
     } else {
       error[[n]] <- matrix(rep(1L, length(acti[[n]])))
     }
   }
 
   #error in hidden layers
-  if(n>2) for(hidden in (n-1):2) error[[hidden]] <- error[[hidden+1]]%*%t(matrix(nn$weights[[hidden]][-1, ], ncol=ncol(nn$weights[[hidden]])))*acti[[hidden]]*(1-acti[[hidden]])
-
+  if(n > 2) for (hidden in (n - 1):2) {
+    error[[hidden]] <- error[[hidden+1]] %*% t(matrix(nn$weights[[hidden]][-1, ], ncol=ncol(nn$weights[[hidden]]))) * nn$dactivation_fun(acti[[hidden]])
+  }
   #error in first layer
   if(policy_linear_output) {
     error[[1]] <- error[[2]]%*%t(matrix(nn$weights[[1]][-1, ], ncol=ncol(nn$weights[[1]])))
   } else {
-    error[[1]] <- error[[2]]%*%t(matrix(nn$weights[[1]][-1, ], ncol=ncol(nn$weights[[1]])))*acti[[1]]*(1-acti[[1]])
+      error[[1]] <- error[[2]]%*%t(matrix(nn$weights[[1]][-1, ], ncol=ncol(nn$weights[[1]]))) * nn$dactivation_fun(acti[[1]])
+
   }
   error
 }
@@ -100,7 +140,7 @@ gradients <- function(nn, error, acti) {
   #remplir les gradients et updater
   gradient <- lapply(2:nn$n_layer, function(layer) {
     b <- apply(error[[layer]], 2, mean)
-    w <- t(acti[[layer-1]])%*%error[[layer]]/nrow(acti[[layer-1]])
+    w <- t(acti[[layer - 1]]) %*% error[[layer]] / nrow(acti[[layer - 1]])
     rbind(b, w)
   })
 
@@ -121,20 +161,21 @@ gradients <- function(nn, error, acti) {
 #' @export
 #'
 # @examples
-backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size = 0.5, algo="backprop") {
+backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000,
+                     step_size = 0.5, algo = "backprop") {
 
   target <- as.matrix(stats::model.frame(as.formula(call("~", nn$formula[[2]])), newdata))
 
   #tracking the loss amount over improvements
-  Loss <- mean((target-predict.nn(nn, newdata))^2)
+  Loss <- mean((target - predict.nn(nn, newdata)) ^ 2)
 
-  n <- nn$n_layer-1
+  n <- nn$n_layer - 1
 
   inputs <- stats::model.frame(as.formula(call("~", nn$formula[[3]])), newdata)
 
   i <- 0
   running <- TRUE
-  if(algo=="backprop") {
+  if(algo == "backprop") {
     while(running) {
 
       acti <- activations(nn, as.matrix(inputs))
@@ -144,27 +185,27 @@ backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size =
       gradient <- gradients(nn, error, acti)
 
       #update
-      nn$weights <- mapply(function(x, y) x-y*step_size, nn$weights, gradient, SIMPLIFY = FALSE)
+      nn$weights <- mapply(function(x, y) x - y * step_size, nn$weights, gradient, SIMPLIFY = FALSE)
 
-      new_mean_loss <- mean((target-predict.nn(nn, newdata))^2)
+      new_mean_loss <- mean((target - predict.nn(nn, newdata)) ^ 2)
 
-      if(tail(Loss, 1)<=new_mean_loss) {
+      if (tail(Loss, 1) <= new_mean_loss) {
         #update back
-        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]+gradient[[layer]]*step_size)
-        step_size <- step_size/2
+        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]] + gradient[[layer]] * step_size)
+        step_size <- step_size / 2
       } else {
         #double stepsize?
-        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]-gradient[[layer]]*step_size)
+        nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]] - gradient[[layer]] * step_size)
 
-        if(new_mean_loss<mean((target-predict.nn(nn, newdata))^2)) {
+        if(new_mean_loss < mean((target - predict.nn(nn, newdata)) ^ 2)) {
           #update back
-          nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]+gradient[[layer]]*step_size)
-        } else {step_size <- step_size*2}
+          nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]] + gradient[[layer]] * step_size)
+        } else {step_size <- step_size * 2}
       }
 
-      Loss <- c(Loss, mean((target-predict.nn(nn, newdata))^2))
+      Loss <- c(Loss, mean((target - predict.nn(nn, newdata)) ^ 2))
 
-      if(all(abs(unlist(gradient))<threshold)) {
+      if(all(abs(unlist(gradient)) < threshold)) {
         running <- FALSE
         print(paste0("threshold reached."))
       }
@@ -189,7 +230,7 @@ backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size =
       if(i==0) gradient <- gradient_new
 
       #update
-      change <- lapply(1:n, function(layer) (gradient_new[[layer]]>=0)!=(gradient[[layer]]>=0))
+      change <- lapply(1:n, function(layer) (gradient_new[[layer]] >= 0) != (gradient[[layer]] >= 0))
       step_update <- lapply(1:n, function(layer) (change[[layer]]*step_update[[layer]]/2+(1-change[[layer]])*step_update[[layer]]*1.2))
       step_update <- mapply(function(x) matrix(pmax(1e-10, pmin(0.5, x)), ncol=ncol(x)), step_update, SIMPLIFY = FALSE)
       nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]]-step_update[[layer]]*sign(gradient_new[[layer]]))
@@ -198,16 +239,16 @@ backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size =
       gradient <- gradient_new
 
 
-      Loss <- c(Loss, mean((target-predict.nn(nn, newdata))^2))
+      Loss <- c(Loss, mean((target - predict.nn(nn, newdata)) ^ 2))
 
-      if(all(abs(unlist(gradient))<threshold)) {
+      if(all(abs(unlist(gradient)) < threshold)) {
         running <- FALSE
         print(paste0("threshold reached."))
       }
       i <- i+1
-      if(i==stepmax) {
+      if(i == stepmax) {
         running <- FALSE
-        if(i!=1) print(paste0(i, " steps reached."))
+        if(i != 1) print(paste0(i, " steps reached."))
       }
     }
   }
@@ -219,7 +260,7 @@ backprop <- function(nn, newdata, threshold=0.0001, stepmax = 10000, step_size =
     nn$mean_error_squ <- tail(Loss, 1)
     nn$step_count <- i
 
-    list(nn=nn, Loss=Loss)
+    list(nn = nn, Loss = Loss)
 }
 
 #' Backpropagate data on a neural network

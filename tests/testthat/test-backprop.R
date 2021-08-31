@@ -22,6 +22,11 @@ test_that("activation is ok", {
                  0.4502895, -1.2274277, -1.1532484, -1.0994210),
                tolerance = 0.001)
 
+  expect_equal(unlist(activations(nn=neuralnetwork(x~a, hidden=c(1, 1), startweights = list(matrix(c(0.2, 0.5), ncol=1), matrix(c(-2, 2), ncol=1), matrix(c(-2, 2), ncol=1)), linear.output = TRUE, activation_fun = ReLU, dactivation_fun = dReLU),
+                                  inputs=matrix(-1:4))),
+               c(-1, 0, 1, 2, 3, 4, 0, 0.2, 0.7, 1.2, 1.7, 2.2, 0, 0, 0, 0.4, 1.4, 2.4, -2, -2, -2, -1.2, 0.8, 2.8),
+               tolerance = 0.001)
+
 })
 
 test_that("errors is ok", {
@@ -64,6 +69,15 @@ test_that("errors is ok", {
     c(-0.2338570, -0.5446055, -0.7736949,  0.2338570,  0.1815352,  0.1289492,  0.6572914,  0.6949739,
       0.7179770),
                tolerance = 0.001)
+
+  expect_equal(
+    {
+      nn=neuralnetwork(x~a, hidden=1, startweights = list(matrix(c(0.2, 0.5), ncol=1), matrix(c(-2, 2), ncol=1)), linear.output = FALSE, activation_fun = ReLU, dactivation_fun = dReLU)
+      unlist(errors(nn, acti=activations(nn, inputs=matrix(-1:4)), target=matrix(rep(-1, 6)), policy_linear_output = FALSE))
+    },
+    c(0, 0, 0, 2.8, 4.8, 6.8, 0, 0, 0, 5.6, 9.6, 13.6, 0, 0, 0, 2.8, 4.8, 6.8),
+    tolerance = 0.001)
+
   ###########
   #expect_equal(unlist(errors(nn=neuralnetwork(x~a, hidden=0, startweights = list(matrix(c(0.2, 0.5), ncol=1)), linear.output = TRUE),
   #                           acti=list(2, 1.2), inputs_indiv=data.frame(a=2), Loss_fun=FALSE)),
@@ -110,8 +124,13 @@ test_that("backprop converges to correct weights", {
   dat2 <- as.data.frame(matrix(1/(1+exp(-(dat$a*2+dat$b*3+1))), ncol=2, nrow=100)*matrix(c(1, 2), byrow=TRUE, nrow=100, ncol=2)+matrix(c(-2, 3), ncol=2, nrow=100, byrow=TRUE))
   colnames(dat2) <- c("x", "y")
   expect_equal({
-    test <- backprop(nn=neuralnetwork(x+y~a+b, hidden=1, startweights = "zero", linear.output = TRUE),
-                               newdata=cbind(dat, dat2), step_size=0.5, stepmax = 200, threshold = 0)
+    test <- backprop(
+      nn=neuralnetwork(x+y~a+b, hidden=1, startweights = "zero", linear.output = TRUE),
+      newdata=cbind(dat, dat2),
+      step_size=0.5,
+      stepmax = 200,
+      threshold = 0
+    )
     unlist(test$nn$weights)
     },
                unlist(list(matrix(1:3), matrix(c(-2, 1, 3, 2), ncol=2))),
@@ -123,6 +142,33 @@ test_that("backprop converges to correct weights", {
     unlist(test2$nn$weights)
   },
   unlist(list(matrix(1:3), matrix(c(-2, 1, 3, 2), ncol=2))),
+  tolerance = 0.1)
+
+
+  dat <- data.frame(a=rnorm(1000, -1, 1.5), b=rnorm(1000))
+  dat2 <- as.data.frame(matrix(pmax(0, dat$a*2+dat$b*3+1), ncol=2, nrow=1000)*matrix(c(1, 2), byrow=TRUE, nrow=1000, ncol=2)+matrix(c(-4, 3), ncol=2, nrow=1000, byrow=TRUE))
+  colnames(dat2) <- c("x", "y")
+  expect_equal({
+    test <- backprop(
+      nn=neuralnetwork(x+y~a+b, hidden=1, linear.output = TRUE, activation_fun = ReLU, dactivation_fun = dReLU),
+      newdata=cbind(dat, dat2),
+      step_size=0.5,
+      stepmax = 800,
+      threshold = 0
+    )
+    unlist(test$nn$weights)
+  },
+  unlist(list(matrix(1:3), matrix(c(-4, 1, 3, 2), ncol=2))),
+  tolerance = 0.2)
+
+  expect_equal({
+    test2 <- backprop(
+      nn=neuralnetwork(x+y~a+b, hidden=1, linear.output = TRUE,
+                       activation_fun = ReLU, dactivation_fun = dReLU),
+      newdata=cbind(dat, dat2), step_size=0.5, stepmax = 800, threshold = 0, algo="rprop+")
+    unlist(test2$nn$weights)
+  },
+  unlist(list(matrix(1:3), matrix(c(-4, 1, 3, 2), ncol=2))),
   tolerance = 0.1)
 
 })

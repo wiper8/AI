@@ -16,7 +16,9 @@ predict.nn <- function(nn, newdata) {
   pred_names <- attr(terms(as.formula(call("~", nn$formula[[3]]))), "term.labels")
 
   #list of the activations in neurons
-  activations <- activations(nn, input=as.matrix(stats::model.frame(as.formula(call("~", nn$formula[[3]])), newdata)))
+  activations <- activations(
+    nn,
+    as.matrix(stats::model.frame(as.formula(call("~", nn$formula[[3]])), newdata)))
 
   #prediction
   pred <- activations[[nn$n_layer]]
