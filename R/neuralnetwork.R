@@ -2,22 +2,27 @@
 
 #' Initialize a neural network
 #'
+#'
+#' @title neuralnetwork
+#'
 #' @param formula formula
 #' @param hidden numeric vector for the number of neurons per hidden layer.
 #' @param startweights NULL, "zero" or list of matrices of the startweights.
 #' @param linear.output logic : are the outputs linear or passed through the
 #'   activation_fun?
 #' @param activation_fun function : activation function for neurons.
+#' @param dactivation_fun function : derivative of the activation function.
 #'
 #' @return neural network (class : nn)
 #' @export
 #'
-# @examples
-#TODO add colnames and rownames to weights matrices
-#TODO check col_gradient green  : make sure 0.5 is black and red and black is correct. also check if colors are at the right places.
+#' @examples
+#' neuralnetwork(out~in, 1)
 neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
                           linear.output = TRUE, activation_fun = sig,
                           dactivation_fun = dsig) {
+  #TODO add colnames and rownames to weights matrices
+  #TODO check col_gradient green  : make sure 0.5 is black and red and black is correct. also check if colors are at the right places.
 
   #initialiser liste du neural network
   nn <- list()
