@@ -4,12 +4,12 @@
 \alias{activations}
 \title{calculate activations in neural network.}
 \usage{
-activations(nn, inputs_indiv)
+activations(nn, inputs)
 }
 \arguments{
 \item{nn}{neural network object.}
 
-\item{inputs_indiv}{data.frame of one observations with every input.}
+\item{inputs}{matrix of observations with every input.}
 }
 \value{
 list of matrices of activations.

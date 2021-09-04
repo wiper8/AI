@@ -2,19 +2,20 @@
 % Please edit documentation in R/backprop.R
 \name{sig}
 \alias{sig}
-\title{Sigmoid function.}
+\title{Sigmoid function}
 \usage{
 sig(x)
 }
 \arguments{
-\item{x}{numeric vector}
+\item{x}{numeric vector.}
 }
 \value{
 sigmoized arguments.
 }
 \description{
-Sigmoid function.
+Sigmoid function
 }
 \examples{
 sig(c(3, 5, -2, 0))
+sig(matrix(1:6, 2))
 }

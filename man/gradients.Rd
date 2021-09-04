@@ -10,6 +10,8 @@ gradients(nn, error, acti)
 \item{nn}{neural network object.}
 
 \item{error}{list of errors.}
+
+\item{acti}{list of activations.}
 }
 \value{
 list of matrices of errors for derivatives.

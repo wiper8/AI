@@ -2,22 +2,37 @@
 % Please edit documentation in R/neuralnetwork.R
 \name{neuralnetwork}
 \alias{neuralnetwork}
-\title{Initialize a neural network}
+\title{neuralnetwork}
 \usage{
-neuralnetwork(formula, hidden = 0, startweights = NULL, linear.output = TRUE)
+neuralnetwork(
+  formula,
+  hidden = 0,
+  startweights = NULL,
+  linear.output = TRUE,
+  activation_fun = sig,
+  dactivation_fun = dsig
+)
 }
 \arguments{
 \item{formula}{formula}
 
-\item{hidden}{numeric vector for the number of neurons per hidden layer}
+\item{hidden}{numeric vector for the number of neurons per hidden layer.}
 
 \item{startweights}{NULL, "zero" or list of matrices of the startweights.}
 
-\item{linear.output}{logic : are the outputs linear or sigmoized?}
+\item{linear.output}{logic : are the outputs linear or passed through the
+activation_fun?}
+
+\item{activation_fun}{function : activation function for neurons.}
+
+\item{dactivation_fun}{function : derivative of the activation function.}
 }
 \value{
 neural network (class : nn)
 }
 \description{
-Initialize a neural network
+neuralnetwork
+}
+\examples{
+neuralnetwork(out~in, 1)
 }

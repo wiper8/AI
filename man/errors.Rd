@@ -5,21 +5,16 @@
 \title{calculate errors in neural network for derivatives.
 Errors are derivatives of the cost function with regards to the z (XW+b).}
 \usage{
-errors(
-  nn,
-  acti,
-  inputs_indiv,
-  target_indiv = NULL,
-  Loss_fun = TRUE,
-  policy_linear_output = TRUE
-)
+errors(nn, acti, inputs, target, Loss_fun = TRUE, policy_linear_output = TRUE)
 }
 \arguments{
 \item{nn}{neural network object.}
 
-\item{inputs_indiv}{data.frame of one observations with every input.}
+\item{acti}{list of matrices of activations (from activations function).}
 
-\item{target_indiv}{data.frame of one observations with every real target.}
+\item{inputs}{matrix of observations with every input.}
+
+\item{target}{matrix of observations with every real target.}
 
 \item{Loss_fun}{logical : if the function to maximize/minimize is a Loss function.
 if FALSE, it is considered to be a linear target.}

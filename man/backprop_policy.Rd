@@ -4,7 +4,15 @@
 \alias{backprop_policy}
 \title{Backpropagate data on a neural network}
 \usage{
-backprop_policy(policy_nn, critic_nn, newdata, stepmax = 1, step_size = 0.5)
+backprop_policy(
+  policy_nn,
+  critic_nn,
+  newdata,
+  n_epoch = 100,
+  step_size = 0.5,
+  batch_size = ceiling(nrow(newdata)/10),
+  trace = FALSE
+)
 }
 \arguments{
 \item{policy_nn}{policy neural network.}
@@ -13,9 +21,14 @@ backprop_policy(policy_nn, critic_nn, newdata, stepmax = 1, step_size = 0.5)
 
 \item{newdata}{data.frame of the inputs from policy and the outputs wanted from critic.}
 
-\item{stepmax}{integer : max number of iterations of backpropagation}
+\item{n_epoch}{integer : number of iterations of backpropagation going
+through every data once.}
 
 \item{step_size}{numeric : multiplier of the gradient.}
+
+\item{batch_size}{integer : size of batch of backpropagation.}
+
+\item{trace}{logical : printing last ran epoch?}
 }
 \value{
 list of neural network (class : nn) and the mean Loss
@@ -25,8 +38,10 @@ Backpropagate data on a neural network
 }
 \examples{
 backprop_policy(
-policy_nn=policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
+policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
 critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
-newdata=data.frame(a=c(6, 12, 0, -5))
+newdata=data.frame(a=c(6, 12, 0, -5)),
+n_epoch = 100,
+batch_size = 3
 )
 }
