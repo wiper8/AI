@@ -120,25 +120,28 @@ test_that("gradients is ok", {
 })
 
 test_that("backprop converges to correct weights", {
-  dat <- data.frame(a=rnorm(100, -1, 1.5), b=rnorm(100))
-  dat2 <- as.data.frame(matrix(1/(1+exp(-(dat$a*2+dat$b*3+1))), ncol=2, nrow=100)*matrix(c(1, 2), byrow=TRUE, nrow=100, ncol=2)+matrix(c(-2, 3), ncol=2, nrow=100, byrow=TRUE))
+  dat <- data.frame(a=rnorm(500, -1, 1.5), b=rnorm(500))
+  dat2 <- as.data.frame(matrix(1/(1+exp(-(dat$a*2+dat$b*3+1))), ncol=2, nrow=500)*matrix(c(1, 2), byrow=TRUE, nrow=500, ncol=2)+matrix(c(-2, 3), ncol=2, nrow=500, byrow=TRUE))
   colnames(dat2) <- c("x", "y")
   expect_equal({
     test <- backprop(
       nn=neuralnetwork(x+y~a+b, hidden=1, startweights = "zero", linear.output = TRUE),
       newdata=cbind(dat, dat2),
       step_size=0.5,
-      stepmax = 200,
-      threshold = 0
+      n_epoch = 200,
+      lr = 0.8
     )
     unlist(test$nn$weights)
     },
-               unlist(list(matrix(1:3), matrix(c(-2, 1, 3, 2), ncol=2))),
+               unlist(list(matrix(1:3), matrix(c(-2, 1, 3, 2), ncol = 2))),
                tolerance = 0.1)
 
   expect_equal({
-    test2 <- backprop(nn=neuralnetwork(x+y~a+b, hidden=1, startweights = "zero", linear.output = TRUE),
-                     newdata=cbind(dat, dat2), step_size=0.5, stepmax = 200, threshold = 0, algo="rprop+")
+    test2 <- backprop(nn=neuralnetwork(x+y~a+b, hidden=1, startweights = list(
+      matrix(c(0.8, 1.8, 3.2), 3),
+      matrix(c(-2.5, 1, 2, 2), 2)
+    ), linear.output = TRUE),
+                     newdata=cbind(dat, dat2), step_size=0.5, n_epoch = 300, lr = 1, algo="rprop+")
     unlist(test2$nn$weights)
   },
   unlist(list(matrix(1:3), matrix(c(-2, 1, 3, 2), ncol=2))),
@@ -150,11 +153,13 @@ test_that("backprop converges to correct weights", {
   colnames(dat2) <- c("x", "y")
   expect_equal({
     test <- backprop(
-      nn=neuralnetwork(x+y~a+b, hidden=1, linear.output = TRUE, activation_fun = ReLU, dactivation_fun = dReLU),
+      nn=neuralnetwork(x+y~a+b, hidden=1, startweights = list(
+        matrix(c(1, 1, 1), 3),
+        matrix(c(-3, 0, 2, 2), 2)
+      ),linear.output = TRUE, activation_fun = ReLU, dactivation_fun = dReLU),
       newdata=cbind(dat, dat2),
-      step_size=0.5,
-      stepmax = 800,
-      threshold = 0
+      step_size = 1,
+      n_epoch = 200
     )
     unlist(test$nn$weights)
   },
@@ -163,9 +168,13 @@ test_that("backprop converges to correct weights", {
 
   expect_equal({
     test2 <- backprop(
-      nn=neuralnetwork(x+y~a+b, hidden=1, linear.output = TRUE,
+      nn=neuralnetwork(x+y~a+b, hidden=1, startweights = list(
+        matrix(c(1, 1, 2), 3),
+        matrix(c(-3, 0, 2, 2), 2)
+      ),
+      linear.output = TRUE,
                        activation_fun = ReLU, dactivation_fun = dReLU),
-      newdata=cbind(dat, dat2), step_size=0.5, stepmax = 800, threshold = 0, algo="rprop+")
+      newdata=cbind(dat, dat2), step_size = 1, n_epoch = 300, algo="rprop+")
     unlist(test2$nn$weights)
   },
   unlist(list(matrix(1:3), matrix(c(-4, 1, 3, 2), ncol=2))),
@@ -176,9 +185,9 @@ test_that("backprop converges to correct weights", {
 
 test_that("backprop_policy is maximized", {
   expect_equal({
-    test <- backprop_policy(policy_nn=neuralnetwork(x~a, c(1, 1), startweights="zero"),
+    test <- backprop_policy(policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
                             critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
-                            newdata=data.frame(a=c(6, 12, 0, -5)), stepmax=100, step_size=0.5)
+                            newdata=data.frame(a=c(6, 12, 0, -5)), n_epoch = 300, step_size=0.5)
     tail(test$Reward, 1)
   },
   -8,
