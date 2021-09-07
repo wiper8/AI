@@ -6,7 +6,7 @@ NULL
 #' @param x numeric vector.
 #'
 #' @return sigmoized arguments.
-#'
+#' @export
 #' @examples
 #' sig(c(3, 5, -2, 0))
 #' sig(matrix(1:6, 2))
@@ -19,7 +19,7 @@ sig <- function(x) {
 #' @param x numeric vector.
 #'
 #' @return derivative of sigmoized arguments.
-#'
+#' @export
 #' @examples
 #' dsig(c(0.2, 0.5, 0.7, 0.9))
 #' dsig(matrix(1:6, 2))
@@ -32,7 +32,7 @@ dsig <- function(x) {
 #' @param x numeric vector.
 #'
 #' @return ReLUed arguments.
-#'
+#' @export
 #' @examples
 #' ReLU(c(3, 5, -2, 0))
 #' ReLU(matrix(-2:3, 2))
@@ -46,12 +46,39 @@ ReLU <- function(x) {
 #' @param x numeric vector.
 #'
 #' @return derivative of ReLUed arguements.
-#'
+#' @export
 #' @examples
 #' dReLU(c(3, 5, -2, 0))
 #' dReLU(matrix(-2:3, 2))
 dReLU <- function(x) {
   ifelse(x < 0, 0, 1)
+}
+
+#' Leaky Rectified Linear Unit activation derivative function
+#'
+#' @param x numeric vector.
+#'
+#' @return Leaky ReLUed arguments.
+#' @export
+#' @examples
+#' LReLU(c(3, 5, -2, 0))
+#' LReLU(matrix(-2:3, 2))
+LReLU <- function(x, a = 0.1) {
+  dim <- dim(x)
+  matrix(pmax(x * a, x), dim[1])
+}
+
+#' Leaky Rectified Linear Unit activation function
+#'
+#' @param x numeric vector.
+#'
+#' @return derivative of Leaky ReLUed arguements.
+#' @export
+#' @examples
+#' dLReLU(c(3, 5, -2, 0))
+#' dLReLU(matrix(-2:3, 2))
+dLReLU <- function(x, a = 0.1) {
+  ifelse(x < 0, a, 1)
 }
 
 #' calculate activations in neural network.

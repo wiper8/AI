@@ -178,7 +178,21 @@ test_that("backprop converges to correct weights", {
     unlist(test2$nn$weights)
   },
   unlist(list(matrix(1:3), matrix(c(-4, 1, 3, 2), ncol=2))),
-  tolerance = 0.1)
+  tolerance = 0.2)
+
+  expect_equal({
+    test2 <- backprop(
+      nn=neuralnetwork(x+y~a+b, hidden=1, startweights = list(
+        matrix(c(1, 1, 2), 3),
+        matrix(c(-3, 0, 2, 2), 2)
+      ),
+      linear.output = TRUE,
+      activation_fun = LReLU, dactivation_fun = dLReLU),
+      newdata=cbind(dat, dat2), step_size = 1, n_epoch = 500, algo="rprop+")
+    unlist(test2$nn$weights)
+  },
+  unlist(list(matrix(1:3), matrix(c(-4, 1, 3, 2), ncol=2))),
+  tolerance = 0.2)
 
 })
 

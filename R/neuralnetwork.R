@@ -28,7 +28,7 @@ neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
   nn <- list()
   nn$formula <- formula
 
-  n_vars <- stringr::str_count(as.character(formula[-1]), " ")/2+1
+  n_vars <- stringr::str_count(as.character(formula[-1]), " ") / 2 + 1
 
 
   #nombre de layer
