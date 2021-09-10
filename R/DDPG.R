@@ -1,6 +1,6 @@
 #' @include backprop.R
 #' @include neuralnetwork.R
-#' @include predict.nn.R
+#' @include predict_nn.R
 #' @include state_action.R
 NULL
 
@@ -28,31 +28,29 @@ NULL
 #'
 #' @return list of the policy and the critic's weights (and the tracking of the weights if track_weights is TRUE) and a plot of the last car position/line.
 #' @export
-#'
-#' @examples
-#' DDPG(policy_nn=neuralnetwork(acc+steer~l+t_l+t+t_r+r+speed, c(3, 2)),
-#'   critic_nn=neuralnetwork(reward~l+t_l+t+t_r+r+speed+acc+steer, c(4, 3)),
-#'   actualize=car::actualize,
-#'   reset=function(...) car:::radar_distance(car::set(car::reset(x=0, y=0, orien=90)), walls=car::walls),
-#'   reward=car::reward,
-#'   done=car::done,
-#'   limit_FUN=car::limits_FUN,
-#'   episodes = 1,
-#'  buffer_len = 10,
-#'   batch_size = 4,
-#'   explor = 0.1,
-#'   gradient_step_n = 5,
-#'   discount = 0.999,
-#'   polyak = 0.9,
-#'   object_inputs=function(x) cbind(x$dist, speed=x$speed),
-#'   see=car::see_line,
-#'   track_weights=TRUE,
-#'   track_object=TRUE,
-#'   t=0.1,
-#'   walls=car::walls,
-#'   finish=car::finish
-#' )
-DDPG <- function(policy_nn, critic_nn, actualize, reset, reward, done, limit_FUN, episodes,
+#examples
+# DDPG(policy_nn=neuralnetwork(acc+steer~l+t_l+t+t_r+r+speed, c(3, 2)),
+#   critic_nn=neuralnetwork(reward~l+t_l+t+t_r+r+speed+acc+steer, c(4, 3)),
+#   actualize=car::actualize,
+#   reset=function(...) car:::radar_distance(car::set(car::reset(x=0, y=0, orien=90)), walls=car::walls1),
+#   reward=car::reward,
+#   done=car::done,
+#   episodes = 1,
+#   buffer_len = 10,
+#   batch_size = 4,
+#   explor = 0.1,
+#   gradient_step_n = 5,
+#   discount = 0.999,
+#   polyak = 0.9,
+#   object_inputs=function(x) cbind(x$dist, speed=x$speed),
+#   see=car::see_line,
+#   track_weights=TRUE,
+#   track_object=TRUE,
+#   t=0.1,
+#   walls=car::walls1,
+#   finish=car::finish1
+# )
+DDPG <- function(policy_nn, critic_nn, actualize, reset, reward, done, episodes,
                  buffer_len, batch_size, explor, gradient_step_n, discount,
                  polyak, object_inputs, see, track_weights=FALSE, track_object=FALSE, ...) {
 
@@ -102,7 +100,7 @@ DDPG <- function(policy_nn, critic_nn, actualize, reset, reward, done, limit_FUN
 
       #prendre décision de direction et d'acceleration
       #############le <object> devrait etre dans ... donc pour linstant cext pas automatisé
-      a <- action(policy_nn, s, limit_FUN, object, ...)
+      a <- action(policy_nn, s, object, ...)
 
       #actualiser le véhicule
       #object_prime <- actualize(object, a, t, walls)
@@ -122,7 +120,7 @@ DDPG <- function(policy_nn, critic_nn, actualize, reset, reward, done, limit_FUN
       Reward <- Reward+discount*rewa
 
 
-      if(length(buffer$d)==buffer_len) {
+      if(length(buffer$d) == buffer_len) {
 
         #removing old data
         buffer$s <- head(buffer$s, -1)
@@ -162,9 +160,9 @@ DDPG <- function(policy_nn, critic_nn, actualize, reset, reward, done, limit_FUN
           a_prime <- action(policy_nn_targ, s_prime)
 
           y[n] <- as.vector(buffer$rewa[n, 1]+
-                              discount*(1-buffer$d[n, 1])*predict.nn(critic_nn_targ, cbind(buffer$s_prime[n, ], a_prime)))
+                              discount*(1-buffer$d[n, 1])*predict_nn(critic_nn_targ, cbind(buffer$s_prime[n, ], a_prime)))
 
-          Q[n] <- predict.nn(critic_nn, cbind(buffer$s[n, ], buffer$a[n, ]))
+          Q[n] <- predict_nn(critic_nn, cbind(buffer$s[n, ], buffer$a[n, ]))
 
           L <- L+(y[n]-Q[n])^2/length(batch_id)
         }

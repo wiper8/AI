@@ -11,7 +11,6 @@ DDPG(
   reset,
   reward,
   done,
-  limit_FUN,
   episodes,
   buffer_len,
   batch_size,
@@ -70,28 +69,4 @@ list of the policy and the critic's weights (and the tracking of the weights if 
 }
 \description{
 Train a DDPG system.
-}
-\examples{
-DDPG(policy_nn=neuralnetwork(acc+steer~l+t_l+t+t_r+r+speed, c(3, 2)),
-  critic_nn=neuralnetwork(reward~l+t_l+t+t_r+r+speed+acc+steer, c(4, 3)),
-  actualize=car::actualize,
-  reset=function(...) car:::radar_distance(car::set(car::reset(x=0, y=0, orien=90)), walls=car::walls),
-  reward=car::reward,
-  done=car::done,
-  limit_FUN=car::limits_FUN,
-  episodes = 1,
- buffer_len = 10,
-  batch_size = 4,
-  explor = 0.1,
-  gradient_step_n = 5,
-  discount = 0.999,
-  polyak = 0.9,
-  object_inputs=function(x) cbind(x$dist, speed=x$speed),
-  see=car::see_line,
-  track_weights=TRUE,
-  track_object=TRUE,
-  t=0.1,
-  walls=car::walls,
-  finish=car::finish
-)
 }

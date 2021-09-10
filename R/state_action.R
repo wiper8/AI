@@ -26,16 +26,13 @@ state <- function(formula, object) {
 #'
 #' @param policy nn
 #' @param state data.frame or list (usually from the 'state' function)
-#' @param limit_FUN function to clip actions (min and max)
 #' @param ... optional : additional parameters for limit_FUN
 #'
 #' @return data.frame of the actions.
 #' @export
 #' @examples action(neuralnetwork(x+y~a+b, hidden=2),
 #'                  state(neuralnetwork(x+y~a+b, hidden=2)$formula,
-#'                  data.frame(x=2, b=5, a=8, y=4)),
-#'                  function(x) pmin(pmax(x, c(-1, 0)), c(1, 1)))
-action <- function(policy, state, limit_FUN=function(x) x, ...) {
-  act <- limit_FUN(predict.nn(policy, state), ...)
-  as.data.frame(act)
+#'                  data.frame(x=2, b=5, a=8, y=4)))
+action <- function(policy, state, ...) {
+  as.data.frame(predict.nn(policy, state))
 }

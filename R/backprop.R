@@ -1,85 +1,7 @@
 #' @include naming.R
+#' @include neuralnetwork.R
 NULL
 
-#' Sigmoid function
-#'
-#' @param x numeric vector.
-#'
-#' @return sigmoized arguments.
-#' @export
-#' @examples
-#' sig(c(3, 5, -2, 0))
-#' sig(matrix(1:6, 2))
-sig <- function(x) {
-  1 / (1 + exp(-x))
-}
-
-#' Sigmoid derivative function
-#'
-#' @param x numeric vector.
-#'
-#' @return derivative of sigmoized arguments.
-#' @export
-#' @examples
-#' dsig(c(0.2, 0.5, 0.7, 0.9))
-#' dsig(matrix(1:6, 2))
-dsig <- function(x) {
-  x * (1 - x)
-}
-
-#' Rectified Linear Unit activation derivative function
-#'
-#' @param x numeric vector.
-#'
-#' @return ReLUed arguments.
-#' @export
-#' @examples
-#' ReLU(c(3, 5, -2, 0))
-#' ReLU(matrix(-2:3, 2))
-ReLU <- function(x) {
-  dim <- dim(x)
-  matrix(pmax(0, x), dim[1])
-}
-
-#' Rectified Linear Unit activation function
-#'
-#' @param x numeric vector.
-#'
-#' @return derivative of ReLUed arguements.
-#' @export
-#' @examples
-#' dReLU(c(3, 5, -2, 0))
-#' dReLU(matrix(-2:3, 2))
-dReLU <- function(x) {
-  ifelse(x < 0, 0, 1)
-}
-
-#' Leaky Rectified Linear Unit activation derivative function
-#'
-#' @param x numeric vector.
-#'
-#' @return Leaky ReLUed arguments.
-#' @export
-#' @examples
-#' LReLU(c(3, 5, -2, 0))
-#' LReLU(matrix(-2:3, 2))
-LReLU <- function(x, a = 0.1) {
-  dim <- dim(x)
-  matrix(pmax(x * a, x), dim[1])
-}
-
-#' Leaky Rectified Linear Unit activation function
-#'
-#' @param x numeric vector.
-#'
-#' @return derivative of Leaky ReLUed arguements.
-#' @export
-#' @examples
-#' dLReLU(c(3, 5, -2, 0))
-#' dLReLU(matrix(-2:3, 2))
-dLReLU <- function(x, a = 0.1) {
-  ifelse(x < 0, a, 1)
-}
 
 #' calculate activations in neural network.
 #'
@@ -90,7 +12,7 @@ dLReLU <- function(x, a = 0.1) {
 #' @return list of matrices of activations.
 activations <- function(nn, inputs) {
 
-  n <- nn$n_layer-1
+  n <- nn$n_layer
 
   #initialiser les activations du neuralnetwork
   acti <- list()
@@ -126,7 +48,7 @@ activations <- function(nn, inputs) {
 errors <- function(nn, acti, inputs, target, Loss_fun = TRUE,
                    policy_linear_output = TRUE) {
 
-  n <- nn$n_layer
+  n <- nn$n_layer+1
 
   #list of error vectors
   error <- list()
@@ -172,9 +94,9 @@ errors <- function(nn, acti, inputs, target, Loss_fun = TRUE,
 gradients <- function(nn, error, acti) {
 
   #remplir les gradients et updater
-  gradient <- lapply(2:nn$n_layer, function(layer) {
-    b <- apply(error[[layer]], 2, mean)
-    w <- t(acti[[layer - 1]]) %*% error[[layer]] / nrow(acti[[layer - 1]])
+  gradient <- lapply(1:nn$n_layer, function(layer) {
+    b <- apply(error[[layer + 1]], 2, mean)
+    w <- t(acti[[layer]]) %*% error[[layer + 1]] / nrow(acti[[layer]])
     rbind(b, w)
   })
 
@@ -199,46 +121,45 @@ trace <- function(bool, epoch) {
 #'
 #' @return list of neural network (class : nn) and the mean Loss
 #' @export
-#'
-#' @examples
-#'nn <- neuralnetwork(out~a+b+c, hidden=c(3, 2))
-#'newdata <- data.frame(
-#'  a=rnorm(15, 10, 10),
-#'  b=rnorm(15, 20, 10),
-#'  c=rnorm(15, 5, 20)
-#')
-#'newdata <- cbind(out=newdata$a*4+newdata$b*-2+newdata$c*10, newdata)
-#'backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
-#'
-#'nn <- neuralnetwork(out~a, hidden=c(1), startweights = "zero")
-#'newdata <- data.frame(
-#'  a=rnorm(150, 10, 10)
-#')
-#'newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
-#'backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
-#'
-#'nn <- neuralnetwork(out~a, hidden=c(1), activation_fun = ReLU,
-#'  dactivation_fun = dReLU)
-#'newdata <- data.frame(
-#'  a=rnorm(150, 10, 10)
-#')
-#'newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
-#'(model <- backprop(nn, newdata, 400, trace = TRUE))
-#'
+# examples
+#nn <- neuralnetwork(out~a+b+c, hidden=c(3, 2))
+#newdata <- data.frame(
+# a=rnorm(15, 10, 10),
+# b=rnorm(15, 20, 10),
+#  c=rnorm(15, 5, 20)
+#)
+#newdata <- cbind(out=newdata$a*4+newdata$b*-2+newdata$c*10, newdata)
+#backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
+#
+#nn <- neuralnetwork(out~a, hidden=c(1), startweights = "zero")
+#newdata <- data.frame(
+#  a=rnorm(150, 10, 10)
+#)
+#newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
+#backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
+#
+#nn <- neuralnetwork(out~a, hidden=c(1), activation_fun = ReLU,
+#  dactivation_fun = dReLU)
+#newdata <- data.frame(
+#  a=rnorm(150, 10, 10)
+#)
+#newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
+#(model <- backprop(nn, newdata, 400, trace = TRUE))
+#
 #TODO ajouter des métriques de loss pour train, validation et test
 #TODO ajouter l'option de splitter automatiquement le newdata en train validation et test
 #  avec des options de id pour tjrs prendre (ou non) les memes données pour ces 3 datasets
 # TODO permmettre la k-fold validation
-backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
+backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.1, lr = 1,
                      batch_size = ceiling(nrow(newdata) / 10), algo = "backprop",
                      trace = FALSE) {
 
   target <- as.matrix(stats::model.frame(as.formula(call("~", nn$formula[[2]])), newdata))
 
   #tracking the loss amount over improvements
-  Loss <- mean((target - predict.nn(nn, newdata)) ^ 2)
+  Loss <- mean((target - predict_nn(nn, newdata)) ^ 2)
 
-  n <- nn$n_layer - 1
+  n <- nn$n_layer
 
   inputs <- stats::model.frame(as.formula(call("~", nn$formula[[3]])), newdata)
 
@@ -259,7 +180,7 @@ backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
         #update
         nn$weights <- mapply(function(x, y) x * (1 - lr) + lr * (x - y * step_size), nn$weights, gradient, SIMPLIFY = FALSE)
 
-        new_mean_loss <- mean((target - predict.nn(nn, newdata)) ^ 2)
+        new_mean_loss <- mean((target - predict_nn(nn, newdata)) ^ 2)
 
         if (tail(Loss, 1) <= new_mean_loss) {
           #update back
@@ -269,7 +190,7 @@ backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
           #double stepsize?
           nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]] - gradient[[layer]] * step_size)
 
-          if(new_mean_loss < mean((target - predict.nn(nn, newdata)) ^ 2)) {
+          if(new_mean_loss < mean((target - predict_nn(nn, newdata)) ^ 2)) {
             #update back
             nn$weights <- lapply(1:n, function(layer) nn$weights[[layer]] + gradient[[layer]] * step_size)
           } else {step_size <- step_size * 2}
@@ -278,7 +199,7 @@ backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
 
         if (length(remainder_id) == 0) break
       }
-      Loss <- c(Loss, mean((target - predict.nn(nn, newdata)) ^ 2))
+      Loss <- c(Loss, mean((target - predict_nn(nn, newdata)) ^ 2))
       i <- i+1
       trace(trace, i)
       if (i == n_epoch) break
@@ -316,7 +237,7 @@ backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
 
         if (length(remainder_id) == 0) break
       }
-      Loss <- c(Loss, mean((target - predict.nn(nn, newdata)) ^ 2))
+      Loss <- c(Loss, mean((target - predict_nn(nn, newdata)) ^ 2))
       i <- i+1
       trace(trace, i)
       if (i == n_epoch) break
@@ -346,21 +267,21 @@ backprop <- function(nn, newdata, n_epoch = 100, step_size = 0.5, lr = 1,
 #'
 #' @return list of neural network (class : nn) and the mean Loss
 #' @export
-#'
-#' @examples
-#' backprop_policy(
-#' policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
-#' critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
-#' newdata=data.frame(a=c(6, 12, 0, -5)),
-#' n_epoch = 100,
-#' batch_size = 3
-#' )
-backprop_policy <- function(policy_nn, critic_nn, newdata, n_epoch = 100,
-                            step_size = 0.5,
+#
+# #examples
+# backprop_policy(
+# policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
+# critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
+# newdata=data.frame(a=c(6, 12, 0, -5)),
+# n_epoch = 100,
+# batch_size = 3
+# )
+backprop_policy <- function(policy_nn, critic_nn, newdata, n_epoch = 1,
+                            step_size = 0.1,
                             batch_size = ceiling(nrow(newdata) / 10),
                             trace = FALSE) {
 
-  crit_inp <- as.data.frame(as.matrix(predict.nn(policy_nn, newdata)))
+  crit_inp <- as.data.frame(as.matrix(predict_nn(policy_nn, newdata)))
   colnames(crit_inp) <- naming(policy_nn, FALSE)
 
   inputs <- cbind(newdata, crit_inp)
@@ -369,7 +290,7 @@ backprop_policy <- function(policy_nn, critic_nn, newdata, n_epoch = 100,
   inputs <- stats::model.frame(as.formula(call("~", critic_nn$formula[[3]])), inputs)
 
   #tracking the reward amount over improvements
-  rew <- mean(predict.nn(critic_nn, inputs))
+  rew <- mean(predict_nn(critic_nn, inputs))
 
   i <- 0
   repeat {
@@ -412,7 +333,7 @@ backprop_policy <- function(policy_nn, critic_nn, newdata, n_epoch = 100,
     }
 
     #tracking the reward amount over improvements
-    pred <- predict.nn(policy_nn, newdata)
+    pred <- predict_nn(policy_nn, newdata)
     if(is.matrix(pred)) {
       crit_inp <- as.data.frame(pred)
       colnames(crit_inp) <- naming(policy_nn, FALSE)
@@ -426,7 +347,7 @@ backprop_policy <- function(policy_nn, critic_nn, newdata, n_epoch = 100,
     #reorder
     new_inputs <- stats::model.frame(as.formula(call("~", critic_nn$formula[[3]])), as.data.frame(new_inputs))
 
-    new_mean_reward <- mean(predict.nn(critic_nn, new_inputs))
+    new_mean_reward <- mean(predict_nn(critic_nn, new_inputs))
 
     #if descent instead of ascent
     if(tail(rew, 1) >= new_mean_reward) {

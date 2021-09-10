@@ -8,7 +8,7 @@ backprop(
   nn,
   newdata,
   n_epoch = 100,
-  step_size = 0.5,
+  step_size = 0.1,
   lr = 1,
   batch_size = ceiling(nrow(newdata)/10),
   algo = "backprop",
@@ -38,30 +38,4 @@ list of neural network (class : nn) and the mean Loss
 }
 \description{
 Backpropagate data on a neural network
-}
-\examples{
-nn <- neuralnetwork(out~a+b+c, hidden=c(3, 2))
-newdata <- data.frame(
- a=rnorm(15, 10, 10),
- b=rnorm(15, 20, 10),
- c=rnorm(15, 5, 20)
-)
-newdata <- cbind(out=newdata$a*4+newdata$b*-2+newdata$c*10, newdata)
-backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
-
-nn <- neuralnetwork(out~a, hidden=c(1), startweights = "zero")
-newdata <- data.frame(
- a=rnorm(150, 10, 10)
-)
-newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
-backprop(nn, newdata, 100, batch_size = 6, trace = TRUE)
-
-nn <- neuralnetwork(out~a, hidden=c(1), activation_fun = ReLU,
- dactivation_fun = dReLU)
-newdata <- data.frame(
- a=rnorm(150, 10, 10)
-)
-newdata <- cbind(out=ifelse(newdata$a<5, -10, 7), newdata)
-(model <- backprop(nn, newdata, 400, trace = TRUE))
-
 }

@@ -17,9 +17,9 @@ color_gradient.nn <- function(u) {
 #'
 #' @return plot
 #' @export
-plot.nn <- function (nn, inputs_indiv=NULL) {
+plot_nn <- function (nn, inputs_indiv=NULL) {
 
-  if(!is.null(inputs_indiv)) acti <- activations(nn, inputs_indiv, nn$n_layer-1)
+  if(!is.null(inputs_indiv)) acti <- activations(nn, inputs_indiv, nn$n_layer)
 
   circles <- lapply(nn$weights, function(x) dim(x)-c(1, 0))
 
@@ -69,9 +69,9 @@ plot.nn <- function (nn, inputs_indiv=NULL) {
   #TODO ajuster la taille des cercles
   p <- ggplot2::ggplot()+
     if(!is.null(inputs_indiv)) {
-      ggplot2::geom_point(ggplot2::aes(x=rep(1:nn$n_layer, unlist(circles)), y=unlist(neur_y), fill=unlist(acti)), shape=21, size=10)
+      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y), fill=unlist(acti)), shape=21, size=10)
     } else {
-      ggplot2::geom_point(ggplot2::aes(x=rep(1:nn$n_layer, unlist(circles)), y=unlist(neur_y)), shape=21, size=10)
+      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y)), shape=21, size=10)
     }
 
   p <- p+ggplot2::scale_fill_gradient(low="#000000", high="#FFFFFF")

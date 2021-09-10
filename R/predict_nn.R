@@ -10,7 +10,7 @@ NULL
 #' @export
 #'
 # @examples
-predict.nn <- function(nn, newdata) {
+predict_nn <- function(nn, newdata) {
 
   target_names <- attr(terms(as.formula(call("~", nn$formula[[2]]))), "term.labels")
   pred_names <- attr(terms(as.formula(call("~", nn$formula[[3]]))), "term.labels")
@@ -22,7 +22,7 @@ predict.nn <- function(nn, newdata) {
   )
 
   #prediction
-  pred <- activations[[nn$n_layer]]
+  pred <- activations[[nn$n_layer + 1]]
 
 
   colnames(pred) <- target_names

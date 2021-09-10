@@ -8,8 +8,8 @@ backprop_policy(
   policy_nn,
   critic_nn,
   newdata,
-  n_epoch = 100,
-  step_size = 0.5,
+  n_epoch = 1,
+  step_size = 0.1,
   batch_size = ceiling(nrow(newdata)/10),
   trace = FALSE
 )
@@ -35,13 +35,4 @@ list of neural network (class : nn) and the mean Loss
 }
 \description{
 Backpropagate data on a neural network
-}
-\examples{
-backprop_policy(
-policy_nn=neuralnetwork(x~a, 1, startweights="zero"),
-critic_nn=neuralnetwork(reward~a+x, 1, startweights=list(matrix(c(0, 0.05, -1), ncol=1), matrix(c(-10, 2), ncol=1))),
-newdata=data.frame(a=c(6, 12, 0, -5)),
-n_epoch = 100,
-batch_size = 3
-)
 }

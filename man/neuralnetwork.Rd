@@ -2,7 +2,7 @@
 % Please edit documentation in R/neuralnetwork.R
 \name{neuralnetwork}
 \alias{neuralnetwork}
-\title{neuralnetwork}
+\title{Initialize a neural network}
 \usage{
 neuralnetwork(
   formula,
@@ -31,8 +31,8 @@ activation_fun?}
 neural network (class : nn)
 }
 \description{
-neuralnetwork
+Initialize a neural network
 }
 \examples{
-neuralnetwork(out~in, 1)
+neuralnetwork(out~inputs, 1)
 }
