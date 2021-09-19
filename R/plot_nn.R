@@ -69,19 +69,19 @@ plot_nn <- function (nn, inputs_indiv=NULL) {
   #TODO ajuster la taille des cercles
   p <- ggplot2::ggplot()+
     if(!is.null(inputs_indiv)) {
-      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y), fill=unlist(acti)), shape=21, size=10)
+      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y), fill=unlist(acti)), shape=21, size=100/(lim_y[2]-lim_y[1]))
     } else {
-      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y)), shape=21, size=10)
+      ggplot2::geom_point(ggplot2::aes(x=rep(1:(nn$n_layer+1), unlist(circles)), y=unlist(neur_y)), shape=21, size=100/(lim_y[2]-lim_y[1]))
     }
 
   p <- p+ggplot2::scale_fill_gradient(low="#000000", high="#FFFFFF")
 
   #weights
   for(i in 1:length(weights_coord)) p <- p+ggplot2::geom_segment(data=weights_coord[[i]], mapping=ggplot2::aes(x=x1, xend=x2, y=y1, yend=y2), col=weights_coord[[i]]$col)
-  for(i in 1:length(weights_coord)) p <- p+ggplot2::geom_text(data=weights_coord[[i]], mapping=ggplot2::aes(x=x1_lab, y=y1_lab, label=weight, angle=angle))
+  for(i in 1:length(weights_coord)) if (nrow(weights_coord[[i]]) < 10)  p <- p+ggplot2::geom_text(data=weights_coord[[i]], mapping=ggplot2::aes(x=x1_lab, y=y1_lab, label=weight, angle=angle))
 
   #biais
-  for(i in 1:length(biais_coord)) p <- p+ggplot2::geom_text(data=biais_coord[[i]], mapping=ggplot2::aes(x=x, y=y, label=biais))
+  for(i in 1:length(biais_coord)) if (nrow(biais_coord[[i]]) < 4) p <- p+ggplot2::geom_text(data=biais_coord[[i]], mapping=ggplot2::aes(x=x, y=y, label=biais))
 
 
   #theme
