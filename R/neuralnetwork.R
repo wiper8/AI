@@ -86,7 +86,7 @@ dLReLU <- function(x, a = 0.1) {
 #'
 #' @param formula formula
 #' @param hidden numeric vector for the number of neurons per hidden layer.
-#' @param startweights NULL, "zero" or list of matrices of the startweights.
+#' @param startweights NULL or list of matrices of the startweights.
 #' @param linear.output logic : are the outputs linear or passed through the
 #'   activation_fun?
 #' @param activation_fun function : activation function for neurons.
@@ -99,7 +99,7 @@ dLReLU <- function(x, a = 0.1) {
 #' neuralnetwork(out~inputs, 1)
 neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
                           linear.output = TRUE, activation_fun = sig,
-                          dactivation_fun = dsig) {
+                          dactivation_fun = dsig, normalisation_entry_z = FALSE) {
   #TODO add colnames and rownames to weights matrices
   #TODO check col_gradient green  : make sure 0.5 is black and red and black is correct. also check if colors are at the right places.
 
@@ -131,11 +131,13 @@ neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
 
   #initialiser les poids.
   if(is.null(startweights)) {
-    for(i in 1:(n_layer)) nn$weights[[i]] <- matrix(stats::rnorm(prod(weights_dims[[i]])), nrow=weights_dims[[i]][1], ncol=weights_dims[[i]][2])
-  } else if(is.list(startweights)) {
+    if (identical(activation_fun, sig)) {
+      for(i in 1:(n_layer)) nn$weights[[i]] <- matrix(c(rep(0, weights_dims[[i]][2]), stats::rnorm(prod(weights_dims[[i]])-weights_dims[[i]][2], 0, sqrt(2/(weights_dims[[1]][1]-1+weights_dims[[1+n_hidden_layer]][2])))), nrow=weights_dims[[i]][1], ncol=weights_dims[[i]][2], byrow = TRUE)
+    } else {
+      for(i in 1:(n_layer)) nn$weights[[i]] <- matrix(c(rep(0.1, weights_dims[[i]][2]), stats::rnorm(prod(weights_dims[[i]])-weights_dims[[i]][2], 0, sqrt(2/(weights_dims[[1]][1]-1)))), nrow=weights_dims[[i]][1], ncol=weights_dims[[i]][2], byrow = TRUE)
+    }
+      } else {
     for(i in 1:(n_layer)) nn$weights[[i]] <- matrix(startweights[[i]], nrow=weights_dims[[i]][1], ncol=weights_dims[[i]][2])
-  } else if(startweights=="zero"){
-    for(i in 1:(n_layer)) nn$weights[[i]] <- matrix(0, nrow=weights_dims[[i]][1], ncol=weights_dims[[i]][2])
   }
 
 
@@ -145,6 +147,7 @@ neuralnetwork <- function(formula, hidden = 0, startweights = NULL,
   nn$activation_fun <- activation_fun
   nn$dactivation_fun <- dactivation_fun
   nn$nb_param <- sum(unlist(lapply(nn$weights, function(x) prod(dim(x)))))
+  nn$normalisation_entry_z <- normalisation_entry_z
 
   nn
 }
